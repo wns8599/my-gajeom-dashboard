@@ -3,37 +3,37 @@ import pandas as pd
 from datetime import datetime
 
 st.set_page_config(layout="wide")
-st.title("📊 가점 관리 대시보드 (기간별 현황)")
+st.title("📊 가점 관리 실시간 통합 대시보드")
 
+# 1. 데이터 로드 (구글 시트 연동)
 @st.cache_data(ttl=600)
 def load_data():
     base_url = "https://docs.google.com/spreadsheets/d/1tPQsHFpeMX91SlFqDlylx4ZOSGmr9tjvReXqABYqkUQ"
-    csv_export_url = f"{base_url}/export?format=csv"
-    return pd.read_csv(csv_export_url)
+    return pd.read_csv(f"{base_url}/export?format=csv")
 
 df = load_data()
-df['지급월'] = pd.to_datetime(df['지급월']) # 날짜 형식 변환
+df['지급월'] = pd.to_datetime(df['지급월'])
 
-# 날짜 기준 구분
+# 2. 기간 구분 (오늘 기준 최근 6개월 / 그 이전)
 today = datetime.now()
-recent_df = df[df['지급월'] >= (today - pd.DateOffset(months=6))]
-past_df = df[df['지급월'] < (today - pd.DateOffset(months=6))]
+limit_date = today - pd.DateOffset(months=6)
 
-col1, col2 = st.columns(2)
+recent_df = df[df['지급월'] >= limit_date].copy()
+past_df = df[df['지급월'] < limit_date].copy()
 
-with col1:
-    st.subheader("🕒 최근 6개월")
-    for _, row in recent_df.iterrows():
-        # 상태에 따라 카드 색상 및 강조
-        color = "red" if "보충" in str(row['상태']) else "green"
-        with st.container(border=True):
-            st.markdown(f"### {row['지급월'].strftime('%Y-%m')}")
-            st.markdown(f":{color}[상태: {row['상태']}]")
-            if "보충" in str(row['상태']):
-                st.error(f"⚠️ 수정 필요: {row['부족 금액']}")
+# 3. 레이아웃
+st.subheader("⚠️ 최근 6개월 집중 관리 (수정 및 시뮬레이션)")
+# 직접 수정 가능하게 data_editor 제공
+edited_recent = st.data_editor(recent_df, use_container_width=True, hide_index=True)
 
-with col2:
-    st.subheader("⏳ 이전 6개월")
-    for _, row in past_df.iterrows():
-        with st.container(border=True):
-            st.write(f"**{row['지급월'].strftime('%Y-%m')}** | 상태: {row['상태']}")
+st.divider()
+
+st.subheader("📋 전체 이력 현황 (참조용)")
+st.dataframe(past_df, use_container_width=True, hide_index=True)
+
+# 4. 시뮬레이션 결과 (보충 필요 항목 강조)
+st.sidebar.header("💡 수정 제안")
+needs_action = edited_recent[edited_recent['상태'] == '⚠️ 보충 필요']
+if not needs_action.empty:
+    st.sidebar.error(f"보충 필요한 달: {len(needs_action)}개")
+    st.sidebar.table(needs_action[['지급월', '부족 금액']])
