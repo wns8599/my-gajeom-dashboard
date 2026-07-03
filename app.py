@@ -7,7 +7,7 @@ st.title("📊 실시간 가점 현황판")
 # 1. 구글 스프레드시트에서 데이터를 실시간으로 가져오는 함수
 @st.cache_data(ttl=600) # 10분마다 새로고침
 def load_data():
-    sheet_url = "https://docs.google.com/spreadsheets/d/1tPQsHFpeMX91SlFqDlylx4ZOSGmr9tjvReXqABYqkUQ/edit?usp=sharing"
+    sheet_url = "https://docs.google.com/spreadsheets/d/1tPQsHFpeMX91SlFqDlylx4ZOSGmr9tjvReXqABYqkUQ/edit?gid=0#gid=0"
     csv_export_url = sheet_url.replace('/edit#gid=', '/export?format=csv&gid=')
     return pd.read_csv(csv_export_url)
 
