@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -439,4 +438,3 @@ if not chart_df.empty:
     st.plotly_chart(fig, use_container_width=True)
 else:
     st.caption("판정 가능한 목표월 데이터가 아직 없습니다.")
-```
