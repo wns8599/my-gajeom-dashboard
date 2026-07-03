@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 
 st.set_page_config(layout="wide")
-st.title("📊 수정 가능한 가점 관리 대시보드")
+st.title("📊 가점 관리 대시보드 (기간별 현황)")
 
 @st.cache_data(ttl=600)
 def load_data():
@@ -11,26 +12,28 @@ def load_data():
     return pd.read_csv(csv_export_url)
 
 df = load_data()
+df['지급월'] = pd.to_datetime(df['지급월']) # 날짜 형식 변환
 
-st.subheader("표를 클릭하여 숫자를 직접 수정해보세요!")
+# 날짜 기준 구분
+today = datetime.now()
+recent_df = df[df['지급월'] >= (today - pd.DateOffset(months=6))]
+past_df = df[df['지급월'] < (today - pd.DateOffset(months=6))]
 
-# data_editor: 여기서 데이터를 직접 수정할 수 있습니다.
-edited_df = st.data_editor(df, use_container_width=True, hide_index=True)
+col1, col2 = st.columns(2)
 
-st.divider()
-st.subheader("수정된 데이터 기반 실적 확인")
+with col1:
+    st.subheader("🕒 최근 6개월")
+    for _, row in recent_df.iterrows():
+        # 상태에 따라 카드 색상 및 강조
+        color = "red" if "보충" in str(row['상태']) else "green"
+        with st.container(border=True):
+            st.markdown(f"### {row['지급월'].strftime('%Y-%m')}")
+            st.markdown(f":{color}[상태: {row['상태']}]")
+            if "보충" in str(row['상태']):
+                st.error(f"⚠️ 수정 필요: {row['부족 금액']}")
 
-# 수정된 데이터(edited_df)를 가지고 실시간으로 다시 상태 계산
-def check_status(row):
-    # 예시 로직: 금액이 0이면 '보충 필요', 아니면 '충족'
-    if row['일용_금액'] + row['특고_금액'] == 0:
-        return '⚠️ 보충 필요'
-    return '✅ 충족'
-
-# 수정된 표의 '상태' 열을 자동으로 갱신
-edited_df['상태'] = edited_df.apply(check_status, axis=1)
-
-# 결과 출력
-st.dataframe(edited_df, use_container_width=True, hide_index=True)
-
-st.info("💡 위에서 수정해도 구글 시트 파일 자체가 바뀌지는 않습니다. 확인용으로 사용하세요!")
+with col2:
+    st.subheader("⏳ 이전 6개월")
+    for _, row in past_df.iterrows():
+        with st.container(border=True):
+            st.write(f"**{row['지급월'].strftime('%Y-%m')}** | 상태: {row['상태']}")
