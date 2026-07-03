@@ -56,9 +56,10 @@ st.markdown(
         --blue-bg: #edf4ff;
     }
     .block-container {
-        padding-top: 1.3rem;
-        padding-bottom: 2.6rem;
-    }
+    padding-top: 4.5rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+}
     .page-title {
         font-size: 28px;
         font-weight: 800;
