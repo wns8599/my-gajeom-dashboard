@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -9,6 +8,7 @@ st.set_page_config(
     page_title="조달청 가점관리 대시보드",
     layout="wide",
     page_icon="bar_chart",
+    initial_sidebar_state="collapsed",
 )
 
 DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1tPQsHFpeMX91SlFqDlylx4ZOSGmr9tjvReXqABYqkUQ"
@@ -211,7 +211,7 @@ def compact_money(value) -> str:
     amount = int(value)
     sign = "-" if amount < 0 else ""
     amount = abs(amount)
-    manwon = round(amount / 10000)
+    manwon = amount // 10000
     if manwon <= 0 and amount > 0:
         manwon = 1
     return f"{sign}{manwon:,}만원"
@@ -403,28 +403,16 @@ def render_detail(row: pd.Series):
     c1, c2 = st.columns(2)
     c1.metric(
         "최근 6개월",
-        f"{money(row['recent_amt'])} / {people(row['recent_cnt'])}",
+        f"{compact_money(row['recent_amt'])} / {people(row['recent_cnt'])}",
     )
     c2.metric(
         "이전 6개월",
-        f"{money(row['prev_amt'])} / {people(row['prev_cnt'])}",
+        f"{compact_money(row['prev_amt'])} / {people(row['prev_cnt'])}",
     )
 
     c3, c4 = st.columns(2)
-    c3.metric("부족 금액", money(row["gap_amt"]))
+    c3.metric("부족 금액", compact_money(row["gap_amt"]))
     c4.metric("부족 인원", people(row["gap_cnt"]))
-
-
-with st.sidebar:
-    st.header("설정")
-    sheet_url = st.text_input("구글 시트 URL", value=DEFAULT_SHEET_URL)
-    if st.button("시트 새로고침", use_container_width=True):
-        st.cache_data.clear()
-    months_ahead = st.slider("표시할 목표월 범위", 3, 18, 9)
-    show_ok = st.checkbox("충족 항목 표시", value=True)
-    show_nodata = st.checkbox("데이터부족 항목 표시", value=False)
-    st.divider()
-    st.caption("지급월을 수정하면 목표월별 최근/이전 6개월 비교 결과가 즉시 다시 계산됩니다.")
 
 
 st.markdown('<div class="page-title">조달청 가점관리 대시보드</div>', unsafe_allow_html=True)
@@ -433,10 +421,23 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+with st.expander("⚙ 설정", expanded=False):
+    setting_cols = st.columns([3, 1, 1, 1], gap="medium")
+    with setting_cols[0]:
+        sheet_url = st.text_input("구글 시트 URL", value=DEFAULT_SHEET_URL)
+    with setting_cols[1]:
+        months_ahead = st.slider("표시 범위", 3, 18, 9)
+    with setting_cols[2]:
+        show_ok = st.checkbox("충족 표시", value=True)
+    with setting_cols[3]:
+        show_nodata = st.checkbox("데이터부족 표시", value=False)
+        if st.button("새로고침", use_container_width=True):
+            st.cache_data.clear()
+
 try:
     raw_df = clean(load_sheet(sheet_url))
 except Exception as exc:
-    st.error(f"구글 시트를 불러오지 못했습니다. URL과 공유 설정을 확인해주세요. ({exc})")
+    st.warning(f"구글 시트를 불러오지 못했습니다. URL과 공유 설정을 확인해주세요. ({exc})")
     st.stop()
 
 if raw_df.empty:
@@ -523,32 +524,3 @@ with right_col:
                 render_status_card(row)
                 with st.expander(card_button_label(row), expanded=False):
                     render_detail(row)
-
-
-st.divider()
-st.subheader("목표월별 부족금액 추이")
-
-chart_df = result[result["status"] != STATUS_NODATA].copy()
-if not chart_df.empty:
-    colors = chart_df["status"].map({STATUS_OK: "#168a52", STATUS_NEED: "#c83f3f"})
-    fig = go.Figure()
-    fig.add_bar(
-        x=chart_df["target"],
-        y=chart_df["gap_amt"].fillna(0),
-        marker_color=colors,
-        text=chart_df["status"],
-        hovertemplate="%{x|%Y-%m}<br>부족금액: %{y:,}원<extra></extra>",
-    )
-    fig.add_vline(x=now, line_dash="dot", line_color="#667085", annotation_text="이번달")
-    fig.update_layout(
-        height=320,
-        xaxis_title="목표월",
-        yaxis_title="부족금액(원)",
-        margin=dict(t=10, b=10, l=10, r=10),
-        showlegend=False,
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.caption("판정 가능한 목표월 데이터가 아직 없습니다.")
