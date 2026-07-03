@@ -40,24 +40,6 @@ STATUS_NODATA = "데이터부족"
 st.markdown(
     """
     <style>
-    .block-container {
-    padding-top: 2.2rem !important;
-}
-
-* {
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    white-space: normal;
-}
-
-h1, h2, h3 {
-    line-height: 1.3 !important;
-    margin-top: 10px !important;
-}
-
-div[data-testid="stExpanderDetails"] {
-    font-size: 12.5px !important;
-}
     :root {
         --surface: #ffffff;
         --muted: #667085;
@@ -419,18 +401,18 @@ def render_detail(row: pd.Series):
         return
 
     c1, c2 = st.columns(2)
-    c1.markdown(
+    c1.metric(
         "최근 6개월",
         f"{compact_money(row['recent_amt'])} / {people(row['recent_cnt'])}",
     )
-    c2.markdown(
+    c2.metric(
         "이전 6개월",
         f"{compact_money(row['prev_amt'])} / {people(row['prev_cnt'])}",
     )
 
     c3, c4 = st.columns(2)
-    c3.markdown("부족 금액", compact_money(row["gap_amt"]))
-    c4.markdown("부족 인원", people(row["gap_cnt"]))
+    c3.metric("부족 금액", compact_money(row["gap_amt"]))
+    c4.metric("부족 인원", people(row["gap_cnt"]))
 
 
 st.markdown('<div class="page-title">조달청 가점관리 대시보드</div>', unsafe_allow_html=True)
